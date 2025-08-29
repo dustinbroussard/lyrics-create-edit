@@ -1,0 +1,81 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>LyricSmith</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#00bcd4">
+    <link rel="icon" href="/assets/icons/icon-192x192.png">
+    <!-- Use a single up-to-date Font Awesome version -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Neonderthaw&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="lib/mammoth.browser.min.js"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+  <div class="main-box">
+    <header class="app-header">
+      <div class="header-top">
+        <div class="app-logo">
+          <img src="assets/images/mylogo.png" alt="App Logo" class="app-logo-img">
+        </div>
+        <button id="theme-toggle-btn" class="theme-icon-btn" title="Toggle Light/Dark" aria-label="Toggle light or dark theme"><i class="fas fa-adjust"></i></button>
+      </div>
+      <div id="tab-toolbar" class="toolbar"></div>
+    </header>
+    <main id="app">
+      <section id="songs" class="tab active">
+        <div class="page-content songs-page">
+          <div id="song-list" class="song-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+    <script>
+        // Register service worker and check for updates
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('sw.js').then(reg => {
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  let container = document.querySelector('.toast-container');
+                  if (!container) {
+                    container = document.createElement('div');
+                    container.className = 'toast-container';
+                    document.body.appendChild(container);
+                  }
+                  const toast = document.createElement('div');
+                  toast.className = 'toast toast-info';
+                  toast.innerHTML = `Update available! <a href="#" id="reload-app">Refresh</a>`;
+                  container.appendChild(toast);
+                  setTimeout(() => toast.classList.add('show'), 10);
+                  document.getElementById('reload-app')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (reg.waiting) {
+                      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                    location.reload();
+                  });
+                  setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                  }, 10000);
+                }
+              });
+            });
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              // New service worker has taken control
+            });
+          });
+        }
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>

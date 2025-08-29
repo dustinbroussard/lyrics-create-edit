@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LyricSmith - Editor Mode</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="editor.css">
+    <link rel="icon" href="../assets/icons/icon-192x192.png">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Neonderthaw&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <style>
+        /* Additional styles for metadata panel */
+        .metadata-panel {
+            position: fixed;
+            max-height: 100vh;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-light);
+            border-radius: calc(var(--border-radius-base) * 1.25) 0 0 calc(var(--border-radius-base) * 1.25);
+            z-index: 1001;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            padding: 1rem;
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(4px);
+        }
+
+        .metadata-panel:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .metadata-panel.open {
+            right: 0;
+        }
+        
+        .metadata-panel h3 {
+            margin: 0 0 1rem 0;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .metadata-close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        
+        .metadata-close-btn:hover {
+            color: var(--accent-primary);
+        }
+        
+        @media (max-width: 800px) {
+            .metadata-panel {
+                width: 100%;
+                right: -100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="editor-mode" class="editor-mode-overlay">
+        <header id="app-header">
+            <div class="header-left">
+                <h1 id="app-title">LyricSmith</h1>
+                <div id="save-status"></div>
+                <span id="song-edited"></span>
+            </div>
+            <div class="header-right">
+             <div id="font-controls">
+                    <button id="font-decrease" title="Decrease Font Size">−</button>
+                    <span id="font-size-display">100%</span>
+                    <button id="font-increase" title="Increase Font Size">+</button>
+                </div>
+                <button id="editor-menu-btn" class="btn icon-btn" title="Editor Menu">
+                    <i class="fas fa-ellipsis-h"></i>
+                </button>
+                <button id="add-section-btn" class="btn icon-btn" title="Add Section">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button id="ai-tools-btn" class="btn icon-btn" title="AI Tools">
+                    <i class="fas fa-robot"></i>
+                </button>
+                <button id="theme-toggle-btn" class="btn icon-btn" title="Toggle Theme">
+                    <i class="fas fa-adjust"></i>
+                </button>
+                <button id="exit-editor-btn" class="btn icon-btn" title="Exit Editor">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </header>
+
+        <div id="lyrics-editor-container">
+            <div id="lyrics-display"></div>
+
+            <!-- Enhanced Copy Button with Dropdown -->
+
+        </div>
+
+        <div id="ai-context-menu" class="ai-context-menu">
+            <button data-action="rhyme"><i class="fas fa-bullseye"></i> Rhyme</button>
+            <button data-action="reword"><i class="fas fa-sync"></i> Reword</button>
+            <button data-action="rewrite"><i class="fas fa-pen"></i> Rewrite</button>
+            <button data-action="continue"><i class="fas fa-lightbulb"></i> Continue</button>
+            <button id="ai-menu-close" class="ai-menu-close"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div id="section-menu" class="section-menu">
+            <button data-action="rename"><i class="fas fa-i-cursor"></i> Rename</button>
+            <button data-action="delete-label"><i class="fas fa-tag"></i> Delete Label</button>
+            <button data-action="delete-section"><i class="fas fa-trash"></i> Delete Label + Lyrics</button>
+            <button id="section-menu-close" class="section-menu-close"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <button id="scroll-to-top-btn" class="icon-btn scroll-to-top-btn" title="Scroll to Top">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+    </div>
+
+    <div id="copy-modal" class="modal-overlay">
+      <div class="modal">
+        <h2>Copy Options</h2>
+        <button class="modal-copy-btn" data-copy-type="raw"><i class="fas fa-align-left"></i> Raw Lyrics</button>
+        <button class="modal-copy-btn" data-copy-type="chords"><i class="fas fa-guitar"></i> Lyrics + Chords</button>
+        <button class="modal-copy-btn" data-copy-type="formatted"><i class="fas fa-file-alt"></i> Full Song (Markdown)</button>
+        <button class="modal-copy-btn" data-copy-type="metadata"><i class="fas fa-info-circle"></i> Metadata Only</button>
+        <button class="modal-copy-btn" data-copy-type="download"><i class="fas fa-download"></i> Download as TXT</button>
+        <button class="close-modal-btn"><i class="fas fa-times"></i> Close</button>
+      </div>
+    </div>
+
+    <div id="editor-modal" class="modal-overlay">
+      <div class="modal">
+        <h2>Editor Options</h2>
+        <button id="toggle-chords-btn" class="modal-action-btn"><i class="fas fa-guitar"></i> Toggle Chords</button>
+        <button id="toggle-read-only-btn" class="modal-action-btn"><i class="fas fa-lock"></i> Performance Mode</button>
+        <div class="modal-action-btn">
+          <label for="edit-mode-select"><i class="fas fa-edit"></i> Edit Mode</label>
+          <select id="edit-mode-select" class="modal-select">
+            <option value="both">Both</option>
+            <option value="lyrics">Lyrics</option>
+            <option value="chords">Chords</option>
+          </select>
+        </div>
+        <div class="modal-action-btn">
+           <i class="fas fa-bullseye"></i> Rhyme Colors   <input type="checkbox" id="rhyme-mode-toggle">
+        </div>
+        <button id="save-song-btn" class="modal-action-btn"><i class="fas fa-save"></i> Save Song</button>
+        <button id="copy-lyrics-btn" class="modal-action-btn"><i class="fas fa-copy"></i> Copy Options</button>
+        <button id="undo-btn" class="modal-action-btn"><i class="fas fa-undo"></i> Undo</button>
+        <button id="redo-btn" class="modal-action-btn"><i class="fas fa-redo"></i> Redo</button>
+        <button id="metadata-toggle-btn" class="modal-action-btn"><i class="fas fa-info-circle"></i> Song Metadata</button>
+        <button class="close-modal-btn"><i class="fas fa-times"></i> Close</button>
+      </div>
+    </div>
+
+    <div id="ai-tools-modal" class="modal-overlay">
+      <div class="modal">
+        <h2>AI Tools</h2>
+        <textarea id="ai-additional-notes" class="ai-notes-input" placeholder="Additional notes..." rows="2"></textarea>
+        <button class="tool-option modal-action-btn" data-prompt="Generate First Draft"><i class="fas fa-magic"></i> Generate First Draft</button>
+        <button class="tool-option modal-action-btn" data-prompt="Polish Lyrics"><i class="fas fa-brush"></i> Polish Lyrics</button>
+        <button class="tool-option modal-action-btn" data-prompt="Rewrite in Different Style"><i class="fas fa-pen"></i> Rewrite in Style</button>
+        <button class="tool-option modal-action-btn" data-prompt="Continue Song"><i class="fas fa-arrow-down"></i> Continue Song</button>
+        <button class="tool-option modal-action-btn" data-prompt="Suggest Chords"><i class="fas fa-guitar"></i> Suggest Chords</button>
+        <button id="ai-format-btn" class="modal-action-btn"><i class="fas fa-broom"></i> Clean Format</button>
+        <button id="regenre-btn" class="modal-action-btn"><i class="fas fa-random"></i> Re-Genre</button>
+        <button id="ai-settings-btn" class="modal-action-btn"><i class="fas fa-cog"></i> Settings</button>
+        <button class="close-modal-btn"><i class="fas fa-times"></i> Close</button>
+      </div>
+    </div>
+
+    <div id="add-section-modal" class="modal-overlay">
+      <div class="modal">
+        <h2>Add Section</h2>
+        <button class="modal-action-btn" data-section="[Intro]"><i class="fas fa-play"></i> Intro</button>
+        <button class="modal-action-btn" data-section="[Pre-Chorus]"><i class="fas fa-step-forward"></i> Pre-Chorus</button>
+        <button class="modal-action-btn" data-section="[Verse]"><i class="fas fa-microphone-alt"></i> Verse</button>
+        <button class="modal-action-btn" data-section="[Chorus]"><i class="fas fa-music"></i> Chorus</button>
+        <button class="modal-action-btn" data-section="[Bridge]"><i class="fas fa-link"></i> Bridge</button>
+        <button class="modal-action-btn" data-section="[Outro]"><i class="fas fa-flag-checkered"></i> Outro</button>
+        <button class="close-modal-btn"><i class="fas fa-times"></i> Close</button>
+      </div>
+    </div>
+
+    <!-- Metadata Panel -->
+    <div id="metadata-panel" class="metadata-panel">
+        <h3>
+            Song Information
+            <button id="metadata-close-btn" class="metadata-close-btn" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </h3>
+        
+        <div class="metadata-editor">
+            <div class="metadata-row">
+                <label for="song-title-meta">Title:</label>
+                <input type="text" id="song-title-meta" placeholder="Song title">
+            </div>
+            
+            <div class="metadata-row">
+                <label for="song-key">Key:</label>
+                <select id="song-key">
+                    <option value="">Select Key</option>
+                    <option value="C">C</option>
+                    <option value="C#">C#</option>
+                    <option value="D">D</option>
+                    <option value="D#">D#</option>
+                    <option value="E">E</option>
+                    <option value="F">F</option>
+                    <option value="F#">F#</option>
+                    <option value="G">G</option>
+                    <option value="G#">G#</option>
+                    <option value="A">A</option>
+                    <option value="A#">A#</option>
+                    <option value="B">B</option>
+                </select>
+            </div>
+            
+            <div class="metadata-row">
+                <label for="song-tempo-meta">Tempo (BPM):</label>
+                <input type="number" id="song-tempo-meta" min="60" max="240">
+            </div>
+            
+            <div class="metadata-row">
+                <label for="song-time-signature">Time Signature:</label>
+                <select id="song-time-signature">
+                    <option value="4/4">4/4</option>
+                    <option value="3/4">3/4</option>
+                    <option value="2/4">2/4</option>
+                    <option value="6/8">6/8</option>
+                    <option value="12/8">12/8</option>
+                </select>
+            </div>
+            
+            <div class="metadata-row">
+                <label for="song-tags">Tags:</label>
+                <input type="text" id="song-tags" placeholder="rock, ballad, easy">
+                <small>Separate tags with commas</small>
+            </div>
+            
+            <div class="metadata-row">
+                <label for="song-notes">Performance Notes:</label>
+                <textarea id="song-notes" placeholder="Structure, performance notes, etc." rows="4"></textarea>
+            </div>
+            
+            <div class="metadata-row">
+                <label>Created:</label>
+                <span id="song-created" class="metadata-info"></span>
+            </div>
+            
+            <div class="metadata-row">
+                <label>Last Edited:</label>
+                <span id="song-edited-meta" class="metadata-info"></span>
+            </div>
+            
+            <div class="metadata-row">
+                <button id="export-single-song" class="btn" style="width: 100%; margin-top: 1rem;">
+                    <i class="fas fa-download"></i>
+                    Export This Song
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ai-settings-panel" class="ai-settings-panel">
+        <h3>
+            AI Settings
+            <button id="ai-settings-close" class="icon-btn" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </h3>
+        <div class="settings-row">
+            <label for="openrouter-api-key">API Key</label>
+            <input type="text" id="openrouter-api-key" placeholder="OpenRouter API Key">
+        </div>
+        <div class="settings-row">
+            <label for="model-search">Model</label>
+            <input type="text" id="model-search" placeholder="Search models...">
+            <div id="model-list" class="model-list"></div>
+        </div>
+        <button id="save-ai-settings" class="modal-action-btn" style="width:100%"><i class="fas fa-save"></i> Save</button>
+    </div>
+
+    <script src="../config.js"></script>
+    <script src="songs.js"></script>
+    <script src="editor.js"></script>
+
+    <script>
+        // Additional functionality for metadata panel
+        document.addEventListener('DOMContentLoaded', () => {
+            const metadataToggleBtn = document.getElementById('metadata-toggle-btn');
+            const metadataPanel = document.getElementById('metadata-panel');
+            const metadataCloseBtn = document.getElementById('metadata-close-btn');
+            const saveBtn = document.getElementById('save-song-btn');
+            const saveStatus = document.getElementById('save-status');
+            
+            // Toggle metadata panel
+            metadataToggleBtn?.addEventListener('click', () => {
+                metadataPanel.classList.toggle('open');
+                document.getElementById('editor-modal')?.classList.remove('visible');
+            });
+            
+            metadataCloseBtn?.addEventListener('click', () => {
+                metadataPanel.classList.remove('open');
+            });
+            
+            // Manual save button
+            saveBtn?.addEventListener('click', () => {
+                if (window.app?.saveCurrentSong) {
+                    window.app.saveCurrentSong(true);
+                }
+            });
+            
+            // Close panel when clicking outside on mobile
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 800 && 
+                    metadataPanel.classList.contains('open') && 
+                    !metadataPanel.contains(e.target) && 
+                    !metadataToggleBtn.contains(e.target)) {
+                    metadataPanel.classList.remove('open');
+                }
+            });
+        });
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            // Ensure registration path is correct from the editor/ subdirectory
+            navigator.serviceWorker.register('../sw.js');
+        }
+    </script>
+</body>
+</html>

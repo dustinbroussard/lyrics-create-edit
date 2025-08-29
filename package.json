@@ -1,0 +1,15 @@
+{
+  "name": "lyricsmith",
+  "version": "1.0.0",
+  "description": "A **modern, touch-friendly app** for musicians to manage setlists and lyrics with zero clutter and maximum clarity. Built for band rehearsals, gigging, and editor mode.",
+  "main": "script.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"No tests specified\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
