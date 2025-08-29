@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lyricsmith-v4';
+const CACHE_NAME = 'lyricsmith-v6';
 const APP_SHELL = [
     './',
     'index.html',
@@ -13,7 +13,8 @@ const APP_SHELL = [
     'assets/icons/icon-192x192.png',
     'assets/icons/icon-512x512.png',
     'assets/images/mylogo.png',
-    'lib/mammoth.browser.min.js'
+    'lib/mammoth.browser.min.js',
+    'lib/sortable.min.js'
 ];
 
 self.addEventListener('install', event => {

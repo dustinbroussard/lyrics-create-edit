@@ -25,7 +25,7 @@
     {
       "name": "New Song",
       "short_name": "New Song",
-      "url": "/?newSong=1",
+      "url": "./?newSong=1",
       "icons": [
         { "src": "assets/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }
       ]

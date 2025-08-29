@@ -8,11 +8,11 @@
     <link rel="stylesheet" href="editor.css">
     <link rel="icon" href="../assets/icons/icon-192x192.png">
     <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="../lib/fontawesome/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Neonderthaw&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="../lib/sortable.min.js"></script>
     <style>
         /* Additional styles for metadata panel */
         .metadata-panel {
@@ -156,6 +156,9 @@
         </div>
         <div class="modal-action-btn">
            <i class="fas fa-bullseye"></i> Rhyme Colors   <input type="checkbox" id="rhyme-mode-toggle">
+        </div>
+        <div class="modal-action-btn">
+           <i class="fas fa-ruler-horizontal"></i> Measure Mode  <input type="checkbox" id="measure-mode-toggle">
         </div>
         <button id="save-song-btn" class="modal-action-btn"><i class="fas fa-save"></i> Save Song</button>
         <button id="copy-lyrics-btn" class="modal-action-btn"><i class="fas fa-copy"></i> Copy Options</button>

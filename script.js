@@ -167,19 +167,29 @@ document.addEventListener('DOMContentLoaded', () => {
       this.renderToolbar();
       this.bindEvents();
       this.initDragSort();
+
+      // Handle PWA shortcut-triggered creation
+      if (window.__CREATE_NEW_SONG_ON_LOAD__ === true) {
+        // Create and navigate to the editor for the new song
+        this.createNewSong();
+        // Ensure the flag is single-use
+        window.__CREATE_NEW_SONG_ON_LOAD__ = false;
+      }
     },
 
     loadSongs() {
       this.songs = JSON.parse(localStorage.getItem('songs') || '[]');
       // Migrate old songs to new format
       this.songs = this.songs.map(song => this.migrateSongFormat(song));
-      this.saveSongs();
+      // Ensure unique IDs across the library
+      const changed = this.ensureUniqueIds();
+      if (changed) this.saveSongs();
     },
 
     migrateSongFormat(song) {
       // Ensure all songs have the new metadata fields
       return {
-        id: song.id || Date.now().toString(),
+        id: song.id || this.generateId(),
         title: song.title || 'Untitled',
         lyrics: this.normalizeSectionLabels(song.lyrics || ''),
         chords: song.chords || '',
@@ -198,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ? this.normalizeSectionLabels(lyrics)
         : this.defaultSections;
       return {
-        id: Date.now().toString(),
+        id: this.generateId(),
         title,
         lyrics: normalizedLyrics,
         chords,
@@ -215,6 +225,28 @@ document.addEventListener('DOMContentLoaded', () => {
     saveSongs() {
       localStorage.setItem('songs', JSON.stringify(this.songs));
     },
+
+    generateId() {
+      return (
+        Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10)
+      );
+    },
+
+    ensureUniqueIds() {
+      const seen = new Set();
+      let changed = false;
+      for (const song of this.songs) {
+        let id = String(song.id || '');
+        if (!id || seen.has(id)) {
+          id = this.generateId();
+          song.id = id;
+          changed = true;
+        }
+        seen.add(id);
+      }
+      return changed;
+    },
+
 
     normalizeTitle(title) {
       return title
@@ -441,6 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
           editLink.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            try { sessionStorage.setItem('lastSongId', String(song.id)); } catch {}
             window.location.href = `editor/editor.html?songId=${song.id}`;
           });
         }
@@ -457,6 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         item.addEventListener('click', (e) => {
           if (!e.target.closest('.song-actions')) {
+            try { sessionStorage.setItem('lastSongId', String(song.id)); } catch {}
             window.location.href = `editor/editor.html?songId=${song.id}`;
           }
       });
@@ -466,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
   },
 
     initDragSort() {
-      if (!this.songList) return;
+      if (!this.songList || typeof Sortable === 'undefined') return;
       Sortable.create(this.songList, {
         handle: '.drag-handle',
         animation: 150,
@@ -504,6 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </select>
           <button id="add-song-btn" class="btn icon-btn" title="Add Song"><i class="fas fa-plus"></i></button>
           <button id="export-library-btn" class="btn icon-btn" title="Export Library"><i class="fas fa-download"></i></button>
+          <button id="normalize-library-btn" class="btn icon-btn" title="Normalize Library"><i class="fas fa-broom"></i></button>
           <button id="import-clipboard-btn" class="btn icon-btn" title="Paste Song"><i class="fas fa-paste"></i></button>
           <button id="delete-all-songs-btn" class="btn icon-btn danger" title="Delete All Songs"><i class="fas fa-trash"></i></button>
           <label for="song-upload-input" class="btn icon-btn" title="Upload Files"><i class="fas fa-upload"></i></label>
@@ -524,6 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const includeMetadata = confirm('Include metadata in export?');
         this.exportLibrary(includeMetadata);
       });
+      document.getElementById('normalize-library-btn')?.addEventListener('click', () => this.normalizeLibrary());
       document.getElementById('import-clipboard-btn')?.addEventListener('click', async () => {
         try {
           const text = await navigator.clipboard.readText();
@@ -616,6 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
       this.songs.push(newSong);
       this.saveSongs();
       // Redirect to editor for the new song
+      try { sessionStorage.setItem('lastSongId', String(newSong.id)); } catch {}
       window.location.href = `editor/editor.html?songId=${newSong.id}`;
     },
 
@@ -681,6 +718,38 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) {
         console.error('Import failed:', err);
         ClipboardManager.showToast('Import failed - invalid file format', 'error');
+      }
+    },
+
+    normalizeLibrary() {
+      try {
+        let idFixes = 0;
+        let normalized = 0;
+        // Ensure unique IDs
+        const beforeIds = new Set(this.songs.map(s => String(s.id || '')));
+        if (this.ensureUniqueIds()) {
+          const afterIds = new Set(this.songs.map(s => String(s.id)));
+          idFixes = Math.max(0, beforeIds.size - afterIds.size);
+        }
+
+        // Normalize song fields using migrateSongFormat
+        this.songs = this.songs.map((song) => {
+          const migrated = this.migrateSongFormat(song);
+          // Keep original timestamps if present
+          migrated.createdAt = song.createdAt || migrated.createdAt;
+          migrated.lastEditedAt = song.lastEditedAt || migrated.lastEditedAt;
+          if (JSON.stringify(song) != JSON.stringify(migrated)) normalized++;
+          return migrated;
+        });
+
+        this.saveSongs();
+        const msg = `Library normalized${idFixes ? `, fixed IDs: ${idFixes}` : ''}${normalized ? `, updated: ${normalized}` : ''}`;
+        ClipboardManager.showToast(msg, 'success');
+        const query = document.getElementById('song-search-input')?.value || '';
+        this.renderSongs(query);
+      } catch (e) {
+        console.error('Normalize failed', e);
+        ClipboardManager.showToast('Normalize failed', 'error');
       }
     },
 

@@ -8,13 +8,13 @@
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#00bcd4">
-    <link rel="icon" href="/assets/icons/icon-192x192.png">
+    <link rel="icon" href="assets/icons/icon-192x192.png">
     <!-- Use a single up-to-date Font Awesome version -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link href="lib/fontawesome/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Neonderthaw&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="lib/sortable.min.js"></script>
     <script src="lib/mammoth.browser.min.js"></script>
     <script src="config.js"></script>
 </head>
@@ -75,6 +75,23 @@
             });
           });
         }
+    </script>
+    <script>
+      // Handle PWA shortcut: create new song if newSong=1
+      (function() {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('newSong') === '1') {
+            // Defer to script.js after it loads
+            window.__CREATE_NEW_SONG_ON_LOAD__ = true;
+            // Clean the URL so refresh doesn't create duplicates
+            params.delete('newSong');
+            const newSearch = params.toString();
+            const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '') + window.location.hash;
+            window.history.replaceState(null, document.title, newUrl);
+          }
+        } catch {}
+      })();
     </script>
     <script src="script.js"></script>
 </body>

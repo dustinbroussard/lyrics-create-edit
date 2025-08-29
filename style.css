@@ -529,7 +529,6 @@ mark {
 
 .search-input {
     width: 100%;
-    padding: 10%;
     padding: 0.5rem 0.75rem;
     margin: 0;
     background-color: var(--bg-secondary); /* Inputs use tertiary background */
@@ -1381,7 +1380,7 @@ html, body {
     }
     
     .toolbar {
-        padding: 0rem 2.4rem 0rem 2.4rem;
+        padding: 0rem 1.1rem 0rem 1.1rem;
     }
     
     .song-info {

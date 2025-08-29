@@ -270,7 +270,10 @@ function enforceAlternating(lines) {
             }
             this.displayCurrentEditorSong();
             window.addEventListener('beforeunload', (e) => {
-                if (this.hasUnsavedChanges) {
+                // If song is blank, delete it silently on unload
+                if (this.currentSong && this.isSongBlank(this.currentSong)) {
+                    this.deleteSongById(this.currentSong.id);
+                } else if (this.hasUnsavedChanges) {
                     e.preventDefault();
                     e.returnValue = '';
                 }
@@ -279,6 +282,27 @@ function enforceAlternating(lines) {
             this.setupResizeObserver();
             this.isChordsVisible = window.CONFIG.chordsModeEnabled;
             this.updateChordsVisibility();
+        },
+
+        // Consider a song "blank" if it's still the default template with no chords/notes/tags
+        isSongBlank(song) {
+            if (!song) return false;
+            const titleIsDefault = (song.title || '').trim().toLowerCase() === 'new song';
+            const defaultNorm = this.normalizeSectionLabels(this.defaultSections).trim();
+            const lyricsNorm = this.normalizeSectionLabels((song.lyrics || '')).trim();
+            const hasOnlyDefaultLyrics = lyricsNorm === defaultNorm;
+            const chordsEmpty = !(song.chords || '').trim();
+            const notesEmpty = !(song.notes || '').trim();
+            const noTags = !Array.isArray(song.tags) || song.tags.length === 0;
+            return titleIsDefault && hasOnlyDefaultLyrics && chordsEmpty && notesEmpty && noTags;
+        },
+
+        deleteSongById(id) {
+            const idx = this.songs.findIndex(s => String(s.id) === String(id));
+            if (idx !== -1) {
+                this.songs.splice(idx, 1);
+                try { localStorage.setItem('songs', JSON.stringify(this.songs)); } catch {}
+            }
         },
 
         showSaveStatus(state = 'saved') {
@@ -307,15 +331,45 @@ function enforceAlternating(lines) {
             this.songs = JSON.parse(localStorage.getItem('songs')) || [];
             const theme = localStorage.getItem('theme') || 'dark';
             document.documentElement.dataset.theme = theme;
+            // Ensure IDs are unique and remember any remaps
+            this.ensureUniqueIds();
         },
 
+
+
+        generateId() {
+            return (
+                Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10)
+            );
+        },
+
+        ensureUniqueIds() {
+            const seen = new Set();
+            const remap = {};
+            let changed = false;
+            this.songs.forEach((song) => {
+                let id = String(song.id || '');
+                if (!id || seen.has(id)) {
+                    const old = id;
+                    id = this.generateId();
+                    song.id = id;
+                    if (old) remap[old] = id;
+                    changed = true;
+                }
+                seen.add(id);
+            });
+            if (changed) {
+                try { localStorage.setItem('songs', JSON.stringify(this.songs)); } catch {}
+            }
+            this.idRemap = remap;
+        },
         // Enhanced song creation with metadata
         createSong(title, lyrics = '', chords = '') {
             const normalizedLyrics = lyrics.trim()
                 ? this.normalizeSectionLabels(lyrics)
                 : this.defaultSections;
             return {
-                id: Date.now().toString(),
+                id: this.generateId(),
                 title,
                 lyrics: normalizedLyrics,
                 chords,
@@ -910,14 +964,26 @@ function enforceAlternating(lines) {
             const songId = params.get('songId');
             this.editorSongs = this.songs;
 
+            // Primary: by explicit query param
+            let index = -1;
             if (songId) {
-                // Coerce both sides to string to tolerate legacy numeric IDs
                 const targetId = String(songId);
-                this.currentEditorSongIndex = this.editorSongs.findIndex(s => String(s.id) === targetId);
-                if (this.currentEditorSongIndex === -1) this.currentEditorSongIndex = 0;
-            } else {
-                this.currentEditorSongIndex = 0;
+                index = this.editorSongs.findIndex(s => String(s.id) === targetId);
             }
+
+            // Fallback: use lastSongId from sessionStorage if provided
+            if (index === -1) {
+                try {
+                    const lastId = sessionStorage.getItem('lastSongId');
+                    if (lastId) {
+                        const fallbackIndex = this.editorSongs.findIndex(s => String(s.id) === String(lastId));
+                        if (fallbackIndex !== -1) index = fallbackIndex;
+                    }
+                } catch {}
+            }
+
+            // Final fallback: first song
+            this.currentEditorSongIndex = index !== -1 ? index : 0;
         },
 
         updateSongMetadata() {
@@ -1496,7 +1562,10 @@ saveCurrentSong(isExplicit = false) {
         },
 
         exitEditorMode() {
-            if (this.hasUnsavedChanges) {
+            // If the current song is just a blank template, discard it instead of saving
+            if (this.currentSong && this.isSongBlank(this.currentSong)) {
+                this.deleteSongById(this.currentSong.id);
+            } else if (this.hasUnsavedChanges) {
                 if (confirm('You have unsaved changes. Are you sure you want to exit?')) {
                     this.saveCurrentSong(true);
                 } else {
