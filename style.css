@@ -813,7 +813,7 @@ mark {
     cursor: grab;
     font-size: 1.3em;
     opacity: 0.6;
-    margin-right: 10px;
+    margin-right: 25px;
     user-select: none;
     transition: opacity 0.15s;
 }
@@ -1147,7 +1147,7 @@ html, body {
     backdrop-filter: blur(4px);
     transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
   }
-  }
+}
   
 
   /* Reduce lyric container padding for tighter view */
@@ -1191,7 +1191,7 @@ html, body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0rem;
 }
 
 .song-title {

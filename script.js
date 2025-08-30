@@ -426,7 +426,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </div>
           <div class="song-actions">
-            <i class="fas fa-grip-lines drag-handle" title="Drag to reorder" aria-label="Drag to reorder"></i>
             <button class="song-copy-btn icon-btn" title="Quick Copy" aria-label="Quick copy ${safeTitleAttr}" data-song-id="${song.id}">
               <i class="fas fa-copy"></i>
             </button>
