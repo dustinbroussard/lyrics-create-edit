@@ -113,6 +113,72 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+const AI_OUTPUT_CONTRACT = [
+    'Rules (obey strictly):',
+    '1) Return ONLY the requested content.',
+    '2) No explanations, analysis, reasoning, or commentary.',
+    '3) No greetings or prefaces; no summaries.',
+    '4) Do NOT use Markdown or code fences.',
+    '5) No titles or metadata, only section labels in square brackets when applicable.',
+    '6) Trim trailing spaces; at most one blank line between sections.'
+].join(' ');
+
+const AI_RHYME_CONTRACT = [
+    'Return ONLY a concise, comma-separated list of rhyme candidates.',
+    'No extra words, no numbering, no pre/post text.'
+].join(' ');
+
+const MICRO_CONTRACTS = {
+    alternating: [
+        'Format: alternate lines — chords line, then lyrics line, repeating.',
+        'Section labels must be on their own line in square brackets (e.g., [Verse 1]).',
+        'Do not include a title or metadata. Ensure an even number of non-label lines.'
+    ].join(' '),
+    rewriteLine: [
+        'Return only the rewritten line(s). Keep original line breaks.',
+        'No chords, no section labels, no extra text.'
+    ].join(' '),
+    suggestChords: [
+        'For each lyric line, output one chords line above it.',
+        'Section labels remain on their own [Label] lines.',
+        'No other text. Ensure an even number of non-label lines.'
+    ].join(' '),
+    firstDraft: [
+        'Create a complete song with common sections. Use alternating lines (chords/lyrics).',
+        'Section labels on their own [Label] lines. No title/metadata outside labels.'
+    ].join(' '),
+    polish: [
+        'Preserve structure and meaning. Use alternating lines (chords/lyrics).',
+        'Section labels on [Label] lines. No extra commentary or metadata.'
+    ].join(' '),
+    continueSong: [
+        'Append continuation only. Use alternating lines (chords/lyrics).',
+        'Section labels on [Label] lines. Do not repeat provided text.'
+    ].join(' '),
+    formatOnly: [
+        'Reformat only; do not change words unless spacing/labels are incorrect.',
+        'Output alternating lines (chords/lyrics) with [Label] lines; no metadata.'
+    ].join(' '),
+    reGenre: [
+        'Rewrite in target genre while preserving meaning and structure.',
+        'Use alternating lines (chords/lyrics) with [Label] lines; no metadata.'
+    ].join(' ')
+};
+
+function chooseMicroContract(prompt) {
+    if (/^Find rhymes for:/i.test(prompt)) return { rhyme: true, contract: AI_RHYME_CONTRACT };
+    if (/^Suggest alternative wording/i.test(prompt)) return { contract: MICRO_CONTRACTS.rewriteLine };
+    if (/^Rewrite this line/i.test(prompt)) return { contract: MICRO_CONTRACTS.rewriteLine };
+    if (/^Continue the (song|lyrics)/i.test(prompt) || /^Continue the song/i.test(prompt)) return { contract: MICRO_CONTRACTS.continueSong };
+    if (/^Suggest chord progressions/i.test(prompt)) return { contract: MICRO_CONTRACTS.suggestChords };
+    if (/^Write a complete first draft/i.test(prompt)) return { contract: MICRO_CONTRACTS.firstDraft };
+    if (/^Polish the following lyrics/i.test(prompt)) return { contract: MICRO_CONTRACTS.polish };
+    if (/^Rewrite these lyrics in the style/i.test(prompt)) return { contract: MICRO_CONTRACTS.alternating };
+    if (/^Clean up the formatting for this song/i.test(prompt)) return { contract: MICRO_CONTRACTS.formatOnly };
+    if (/^Rewrite the following song in the .* genre/i.test(prompt)) return { contract: MICRO_CONTRACTS.reGenre };
+    return { contract: MICRO_CONTRACTS.alternating };
+}
+
 async function callOpenRouterAPI(prompt) {
     try {
         if (!window.CONFIG.openrouterApiKey) {
@@ -128,10 +194,17 @@ async function callOpenRouterAPI(prompt) {
             },
             body: JSON.stringify({
                 model: window.CONFIG.defaultModel || 'openrouter/auto',
+                temperature: 0.4,
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a helpful songwriting assistant. When chords are provided, return chords and lyrics on alternating lines without additional commentary. Label song sections in square brackets (e.g., [Verse 1], [Chorus]).'
+                        content: [
+                            'You are a precise songwriting assistant.',
+                            'Follow the user\'s format contract exactly and be terse.',
+                            'Never include analysis, chain-of-thought, or commentary.',
+                            'Never use code fences or Markdown headings.',
+                            'When applicable, return chords and lyrics on alternating lines and label sections in square brackets.'
+                        ].join(' ')
                     },
                     { role: 'user', content: prompt }
                 ]
@@ -165,14 +238,79 @@ async function callOpenRouterAPI(prompt) {
 function cleanAIOutput(text) {
     return text
         .replace(/\r\n/g, '\n')
-        .replace(/\n{3,}/g, '\n\n')
+        .replace(/<\/?(think|reasoning|analysis)>[\s\S]*?<\/(think|reasoning|analysis)>/gim, '')
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/(^|\n)\s*(analysis|reasoning|thoughts?|notes?|explanation)\s*:\s*[\s\S]*?(\n\s*\n|$)/gim, '$3')
+        .replace(/^\s*(Sure,|Here(?:'|)s|Of course,|Absolutely,|Let(?:'|)s)\b.*?\n+/gim, '')
+        .replace(/^#+\s*/gm, '')
+        .replace(/^(Capo|Key|Tempo|Time Signature).*$/gmi, '')
         .replace(/[ \t]+$/gm, '')
+        .replace(/\n{3,}/g, '\n\n')
         .replace(/^\s+|\s+$/g, '')
         .replace(/^(Verse|Chorus|Bridge|Outro)[^\n]*$/gmi, '[$1]')
-        .replace(/^#+\s*/gm, '')
-        .replace(/```[\s\S]*?```/g, '')
-        .replace(/^(Capo|Key|Tempo|Time Signature).*$/gmi, '')
         .trim();
+}
+
+function isSectionLabel(line = '') {
+    return /^\s*\[[^\n\]]+\]\s*$/.test(line || '');
+}
+
+function isChordToken(tok) {
+    return /^(?:[A-G](?:#|b)?(?:(?:m(?!aj))|maj7|maj9|maj|m7|m9|m11|sus2|sus4|add9|dim7?|aug|\+|°)?(?:\/([A-G](?:#|b)?))?)|N\/?A)$/i.test(tok);
+}
+
+function chordConfidence(line = '') {
+    const tokens = (line || '').trim().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return 0;
+    let good = 0;
+    for (const t of tokens) if (isChordToken(t)) good++;
+    return good / tokens.length;
+}
+
+function isChordLine(line = '') {
+    const l = (line || '').trim();
+    if (!l) return false;
+    if (/^[A-Za-z0-9 ,.'"-]+:$/.test(l)) return false;
+    const conf = chordConfidence(l);
+    if (conf >= 0.6) return true;
+    if (conf >= 0.4 && !/[a-z]{2,}/.test(l.replace(/maj|sus|dim|aug|add|maj7|maj9|m7|m9|m11/gi, '')))
+        return true;
+    return false;
+}
+
+function computeLyricsAndChordsFromText(text) {
+    const lines = (text || '').split(/\n/);
+    const lyricsLines = [];
+    const chordLines = [];
+    for (let i = 0; i < lines.length; ) {
+        const line = (lines[i] || '').trimEnd();
+        if (isSectionLabel(line)) {
+            lyricsLines.push(line);
+            i++;
+            continue;
+        }
+        const firstIsChord = isChordLine(line);
+        let chord = '';
+        let lyric = '';
+        if (firstIsChord) {
+            chord = line;
+            const next = (lines[i + 1] || '').trimEnd();
+            if (next && !isSectionLabel(next)) {
+                lyric = next;
+                i += 2;
+            } else {
+                i += 1;
+            }
+        } else {
+            lyric = line;
+            i += 1;
+        }
+        if (lyric !== '') {
+            lyricsLines.push(lyric);
+            chordLines.push(chord);
+        }
+    }
+    return { lyricsText: lyricsLines.join('\n'), chordsText: chordLines.join('\n') };
 }
 
 function enforceAlternating(lines) {
@@ -247,6 +385,8 @@ function enforceAlternating(lines) {
         sectionMenuTarget: null,
         sectionSortable: null,
         lastSnapshotTime: 0,
+        pendingAI: null,
+        pendingAIRange: null,
 
         syllableCount(word) {
             word = word.toLowerCase();
@@ -604,6 +744,10 @@ function enforceAlternating(lines) {
             this.aiSettingsClose?.addEventListener('click', () => {
                 this.aiSettingsPanel.style.display = 'none';
             });
+            // AI Review modal buttons
+            document.getElementById('ai-accept-btn')?.addEventListener('click', () => this.acceptAI());
+            document.getElementById('ai-reject-btn')?.addEventListener('click', () => this.rejectAI());
+            document.querySelector('#ai-review-modal .close-modal-btn')?.addEventListener('click', () => this.hideAIReview());
             this.saveAISettingsBtn?.addEventListener('click', () => this.saveAISettings());
             this.modelSearchInput?.addEventListener('input', () => this.renderModelList(this.modelSearchInput.value));
             // Long-press or right-click to show AI context menu
@@ -868,46 +1012,154 @@ function enforceAlternating(lines) {
                 alert('Please set your OpenRouter API key in AI Settings.');
                 return;
             }
+            // Preserve current selection range for accept stage
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+                this.pendingAIRange = sel.getRangeAt(0).cloneRange();
+            } else {
+                this.pendingAIRange = null;
+            }
             this.callOpenRouter(prompt);
         },
 
         async callOpenRouter(prompt, append = false) {
             const notes = this.additionalNotesInput?.value.trim();
-            const fullPrompt = notes ? `${prompt}\nAdditional notes: ${notes}` : prompt;
-            const response = await callOpenRouterAPI(fullPrompt);
-            if (!response) return;
+            const { rhyme, contract: micro } = chooseMicroContract(prompt);
+            const base = rhyme ? AI_RHYME_CONTRACT : [AI_OUTPUT_CONTRACT, micro].filter(Boolean).join(' ');
+            const fullPrompt = [base, prompt, notes ? `Additional notes: ${notes}` : ''].filter(Boolean).join('\n');
+            try {
+                this.showAILoading(true);
+                const response = await callOpenRouterAPI(fullPrompt);
+                this.showAILoading(false);
+                if (!response) return;
 
-            // Handle context menu actions based on prompt
-            if (fullPrompt.startsWith('Find rhymes for:')) {
-                ClipboardManager.showToast(response, 'info');
-                return;
-            }
-
-            const selection = window.getSelection();
-            if (fullPrompt.startsWith('Suggest alternative wording') || fullPrompt.startsWith('Rewrite this line')) {
-                if (selection && !selection.isCollapsed) {
-                    const range = selection.getRangeAt(0);
-                    range.deleteContents();
-                    range.insertNode(document.createTextNode(response));
-                    selection.removeAllRanges();
-                    this.saveCurrentSong(true);
+                // Rhymes are informational; show toast as-is
+                if (rhyme) {
+                    ClipboardManager.showToast(cleanAIOutput(response), 'info');
+                    return;
                 }
-                return;
-            }
 
-            if (fullPrompt.startsWith('Continue the lyrics after:')) {
-                if (selection && !selection.isCollapsed) {
-                    const range = selection.getRangeAt(0);
-                    range.collapse(false);
-                    range.insertNode(document.createTextNode('\n' + response));
-                    selection.removeAllRanges();
-                    this.saveCurrentSong(true);
+                // Defer application until user accepts
+                this.pendingAI = { response, append, prompt: fullPrompt };
+                this.showAIReview(cleanAIOutput(response));
+            } catch (e) {
+                this.showAILoading(false);
+                throw e;
+            }
+        },
+
+        showAILoading(visible) {
+            const overlay = document.getElementById('ai-loading-overlay');
+            if (!overlay) return;
+            overlay.style.display = visible ? 'flex' : 'none';
+        },
+
+        showAIReview(text) {
+            const modal = document.getElementById('ai-review-modal');
+            const pre = document.getElementById('ai-review-text');
+            if (!modal || !pre) return;
+            pre.textContent = text;
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('visible'), 10);
+        },
+
+        hideAIReview() {
+            const modal = document.getElementById('ai-review-modal');
+            if (!modal) return;
+            modal.classList.remove('visible');
+            setTimeout(() => { modal.style.display = 'none'; }, 150);
+        },
+
+        acceptAI() {
+            if (!this.pendingAI) { this.hideAIReview(); return; }
+            const { response, append, prompt } = this.pendingAI;
+            const cleaned = cleanAIOutput(response);
+            const ctx = chooseMicroContract(prompt);
+
+            // Handle selection-based actions
+            if (/^Suggest alternative wording/i.test(prompt) || /^Rewrite this line/i.test(prompt)) {
+                const sel = window.getSelection();
+                const range = (this.pendingAIRange && (sel?.rangeCount ? sel.getRangeAt(0) : null)) ? sel.getRangeAt(0) : this.pendingAIRange;
+                if (range) {
+                    try {
+                        const selectionText = this.pendingAIRange?.toString?.() || '';
+                        const selLineCount = (selectionText.match(/\n/g) || []).length + 1;
+                        const normalized = cleaned
+                          .replace(/\n{2,}/g, '\n')
+                          .split(/\n/)
+                          .slice(0, Math.max(1, selLineCount))
+                          .join('\n')
+                          .replace(/^\s*\[[^\]]+\]\s*$/gm, '')
+                          .replace(/^\s+|\s+$/g, '');
+                        range.deleteContents();
+                        range.insertNode(document.createTextNode(normalized));
+                        sel?.removeAllRanges();
+                        this.saveCurrentSong(true);
+                    } catch {}
                 }
+                this.pendingAIRange = null;
+                this.pendingAI = null;
+                this.hideAIReview();
                 return;
             }
 
-            // For AI tools or when no selection, apply to entire song
-            this.applyAIResult(response, append);
+            if (/^Continue the (song|lyrics) after:/i.test(prompt)) {
+                const normalized = computeLyricsAndChordsFromText(cleaned);
+                if (!this.currentSong) { this.hideAIReview(); return; }
+                this.currentSong.lyrics = [this.currentSong.lyrics, this.normalizeSectionLabels(normalized.lyricsText)].filter(Boolean).join('\n');
+                this.currentSong.chords = [this.currentSong.chords, normalized.chordsText].filter(Boolean).join('\n');
+                this.renderLyrics();
+                this.saveCurrentSong(true);
+                ClipboardManager.showToast('Lyrics continued', 'success');
+                this.pendingAIRange = null;
+                this.pendingAI = null;
+                this.hideAIReview();
+                return;
+            }
+
+            // Suggest chords -> align to current lyrics; do not change lyrics
+            if (/^Suggest chord progressions/i.test(prompt)) {
+                if (!this.currentSong) { this.hideAIReview(); return; }
+                const { lyricsText, chordsText } = computeLyricsAndChordsFromText(cleaned);
+                const aiChords = chordsText.split(/\n/);
+                const lyricLines = (this.currentSong.lyrics || '').split(/\n/);
+                const outChords = [];
+                let idx = 0;
+                for (const line of lyricLines) {
+                    if (isSectionLabel(line)) { outChords.push(''); continue; }
+                    outChords.push(aiChords[idx] || '');
+                    if (aiChords[idx] !== undefined) idx++;
+                }
+                this.currentSong.chords = outChords.join('\n');
+                this.renderLyrics();
+                this.saveCurrentSong(true);
+                ClipboardManager.showToast('Chords suggested', 'success');
+                this.pendingAI = null;
+                this.hideAIReview();
+                return;
+            }
+
+            // Default: apply to full song (tools/modals)
+            const normalized = computeLyricsAndChordsFromText(cleaned);
+            if (append) {
+                this.currentSong.lyrics = [this.currentSong.lyrics, this.normalizeSectionLabels(normalized.lyricsText)].filter(Boolean).join('\n');
+                this.currentSong.chords = [this.currentSong.chords, normalized.chordsText].filter(Boolean).join('\n');
+            } else {
+                this.currentSong.lyrics = this.normalizeSectionLabels(normalized.lyricsText);
+                this.currentSong.chords = normalized.chordsText;
+            }
+            this.renderLyrics();
+            this.saveCurrentSong(true);
+            ClipboardManager.showToast('AI update applied', 'success');
+            this.pendingAI = null;
+            this.pendingAIRange = null;
+            this.hideAIReview();
+        },
+
+        rejectAI() {
+            this.pendingAI = null;
+            this.pendingAIRange = null;
+            this.hideAIReview();
         },
 
         async invokeAIFormat() {
@@ -916,12 +1168,7 @@ function enforceAlternating(lines) {
                 const song = this.currentSong;
                 const formatted = ClipboardManager.formatLyricsWithChords(song.lyrics || '', song.chords || '');
                 let prompt = `Clean up the formatting for this song and return chords and lyrics on alternating lines with section labels in square brackets.\nTitle: ${song.title}\nKey: ${song.key}\nTempo: ${song.tempo}\nTime Signature: ${song.timeSignature}\n\n${formatted}`;
-                const notes = this.additionalNotesInput?.value.trim();
-                if (notes) prompt += `\nAdditional notes: ${notes}`;
-                const response = await callOpenRouterAPI(prompt);
-                if (response) {
-                    this.applyAIResult(response, false, 'AI formatting applied!');
-                }
+                this.callOpenRouter(prompt, false);
             } catch (err) {
                 console.error('AI format error', err);
             }
@@ -934,12 +1181,7 @@ function enforceAlternating(lines) {
                 const formatted = ClipboardManager.formatLyricsWithChords(song.lyrics || '', song.chords || '');
                 const tags = song.tags?.length ? song.tags.join(', ') : '';
                 let prompt = `Rewrite the following song in the ${newGenre} genre while preserving meaning and structure. Return chords and lyrics on alternating lines with section labels in square brackets.\nTitle: ${song.title}\nKey: ${song.key}\nTempo: ${song.tempo}\nTags: ${tags}\n\n${formatted}`;
-                const notes = this.additionalNotesInput?.value.trim();
-                if (notes) prompt += `\nAdditional notes: ${notes}`;
-                const response = await callOpenRouterAPI(prompt);
-                if (response) {
-                    this.applyAIResult(response, false, `Re-genred as ${newGenre}`);
-                }
+                this.callOpenRouter(prompt, false);
             } catch (err) {
                 console.error('Re-genre error', err);
             }
@@ -948,19 +1190,15 @@ function enforceAlternating(lines) {
         applyAIResult(responseText, append = false, toastMessage = 'AI update applied') {
             if (!this.currentSong) return;
             const cleaned = cleanAIOutput(responseText);
-            const lines = cleaned.split(/\n/);
-            const { chords, lyrics } = enforceAlternating(lines);
-            const lyricsText = this.normalizeSectionLabels(lyrics.join('\n'));
-            const chordsText = chords.join('\n');
-
+            const { lyricsText, chordsText } = computeLyricsAndChordsFromText(cleaned);
+            const finalLyrics = this.normalizeSectionLabels(lyricsText);
             if (append) {
-                this.currentSong.lyrics = [this.currentSong.lyrics, lyricsText].filter(Boolean).join('\n');
+                this.currentSong.lyrics = [this.currentSong.lyrics, finalLyrics].filter(Boolean).join('\n');
                 this.currentSong.chords = [this.currentSong.chords, chordsText].filter(Boolean).join('\n');
             } else {
-                this.currentSong.lyrics = lyricsText;
+                this.currentSong.lyrics = finalLyrics;
                 this.currentSong.chords = chordsText;
             }
-
             this.renderLyrics();
             this.saveCurrentSong(true);
             ClipboardManager.showToast(toastMessage, 'success');

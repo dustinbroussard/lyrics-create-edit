@@ -40,13 +40,16 @@ const normalizeSectionLabels = (text = '') => {
 const cleanAIOutput = (text) => {
     return text
         .replace(/\r\n/g, '\n')
-        .replace(/\n{3,}/g, '\n\n')
+        .replace(/<\/?(think|reasoning|analysis)>[\s\S]*?<\/(think|reasoning|analysis)>/gim, '')
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/(^|\n)\s*(analysis|reasoning|thoughts?|notes?|explanation)\s*:\s*[\s\S]*?(\n\s*\n|$)/gim, '$3')
+        .replace(/^\s*(Sure,|Here(?:'|)s|Of course,|Absolutely,|Let(?:'|)s)\b.*?\n+/gim, '')
+        .replace(/^#+\s*/gm, '')
+        .replace(/^(Capo|Key|Tempo|Time Signature).*$/gmi, '')
         .replace(/[ \t]+$/gm, '')
+        .replace(/\n{3,}/g, '\n\n')
         .replace(/^\s+|\s+$/g, '')
         .replace(/^(Verse|Chorus|Bridge|Outro)[^\n]*$/gmi, '[$1]')
-        .replace(/^#+\s*/gm, '')
-        .replace(/```[\s\S]*?```/g, '')
-        .replace(/^(Capo|Key|Tempo|Time Signature).*$/gmi, '')
         .trim();
 };
 
