@@ -256,7 +256,9 @@ function isSectionLabel(line = '') {
 }
 
 function isChordToken(tok) {
-    return /^(?:[A-G](?:#|b)?(?:(?:m(?!aj))|maj7|maj9|maj|m7|m9|m11|sus2|sus4|add9|dim7?|aug|\+|°)?(?:\/([A-G](?:#|b)?))?)|N\/?A)$/i.test(tok);
+    // Allow chord tokens like A, Am, Cmaj7, D/F#, etc., or N/A
+    // Fix: ensure the N/A alternative is inside the same non-capturing group
+    return /^(?:[A-G](?:#|b)?(?:(?:m(?!aj))|maj7|maj9|maj|m7|m9|m11|sus2|sus4|add9|dim7?|aug|\+|°)?(?:\/([A-G](?:#|b)?))?|N\/?A)$/i.test(tok);
 }
 
 function chordConfidence(line = '') {
