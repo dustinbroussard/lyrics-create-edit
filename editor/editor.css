@@ -871,6 +871,10 @@
     margin-left: 5rem;
 }
 
+.modal label {
+    color: white !important;
+}
+
 .btn.icon-btn {
     width: 2rem;
     height: 2rem;
