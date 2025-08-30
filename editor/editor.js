@@ -256,8 +256,9 @@ function enforceAlternating(lines) {
             return word.match(/[aeiouy]{1,2}/g)?.length || 0;
         },
 
-        init() {
-            this.loadData();
+        async init() {
+            try { await window.StorageSafe?.init?.(); } catch {}
+            await this.loadData();
             this.loadAISettings();
             this.setupEventListeners();
             this.debouncedSaveCurrentSong = debounce(() => this.saveCurrentSong(false), 500);
@@ -301,7 +302,10 @@ function enforceAlternating(lines) {
             const idx = this.songs.findIndex(s => String(s.id) === String(id));
             if (idx !== -1) {
                 this.songs.splice(idx, 1);
-                try { localStorage.setItem('songs', JSON.stringify(this.songs)); } catch {}
+                try {
+                    localStorage.setItem('songs', JSON.stringify(this.songs));
+                    window.StorageSafe?.snapshotLater?.('editor:delete');
+                } catch {}
             }
         },
 
@@ -320,14 +324,17 @@ function enforceAlternating(lines) {
         safeLocalStorageSet(key, value) {
             try {
                 localStorage.setItem(key, value);
+                try { window.StorageSafe?.snapshotLater?.('editor:set'); } catch {}
                 return true;
             } catch (e) {
                 console.warn('localStorage write failed', e);
                 ClipboardManager?.showToast?.('Storage full or blocked', 'error');
+                try { window.StorageSafe?.snapshotWithData?.(value, 'editor:lsFail'); } catch {}
                 return false;
             }
         },
-        loadData() {
+        async loadData() {
+            try { await window.StorageSafe?.init?.(); } catch {}
             this.songs = JSON.parse(localStorage.getItem('songs')) || [];
             const theme = localStorage.getItem('theme') || 'dark';
             document.documentElement.dataset.theme = theme;
@@ -359,7 +366,7 @@ function enforceAlternating(lines) {
                 seen.add(id);
             });
             if (changed) {
-                try { localStorage.setItem('songs', JSON.stringify(this.songs)); } catch {}
+                this.safeLocalStorageSet('songs', JSON.stringify(this.songs));
             }
             this.idRemap = remap;
         },

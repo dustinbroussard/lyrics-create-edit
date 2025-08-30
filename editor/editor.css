@@ -28,7 +28,7 @@
     align-items: center;
     background: var(--gradient-primary);
     color: var(--text-primary);
-    padding: 0.5rem 1rem;
+    padding: 1rem 0.5rem 1rem 1rem;
     border-bottom: 1px solid var(--border-light);
     position: sticky;
     top: 0;
@@ -79,10 +79,10 @@
 #font-controls button {
     background: var(--accent-secondary);
     border: none;
-    color: #fff;
-    font-size: 1rem;
+    color: var(--bg-primary);
+    font-size: 1.2rem;
     cursor: pointer;
-    padding: 0 0.4rem;
+    padding: 0 0.7rem;
     border-radius: 40px;
     transition: background 0.2s;
 }
@@ -95,7 +95,7 @@
     min-width: 2.5rem;
     text-align: center;
     font-size: 0.9rem;
-    color: #ccc;
+    color: var(--bg-primary);
 }
 
 /* Responsive tweaks */

@@ -1,10 +1,17 @@
 
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>LyricSmith</title>
+    <script>
+      // Apply saved theme ASAP to avoid FOUC
+      try {
+        const t = localStorage.getItem('theme') || 'dark';
+        document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#00bcd4">
@@ -15,11 +22,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Neonderthaw&display=swap" rel="stylesheet">
     <script src="lib/sortable.min.js"></script>
+    <script src="lib/storage.js"></script>
     <script src="lib/mammoth.browser.min.js"></script>
     <script src="config.js"></script>
-</head>
-<body>
-  <div class="main-box">
+  </head>
+  <body>
+    <div id="bg-filler" aria-hidden="true"></div>
+    <div class="main-box">
     <header class="app-header">
       <div class="header-top">
         <div class="app-logo">

@@ -12,6 +12,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Neonderthaw&display=swap" rel="stylesheet">
+    <script>
+      try { document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark'; } catch {}
+    </script>
+    <script src="../lib/storage.js"></script>
     <script src="../lib/sortable.min.js"></script>
     <style>
         /* Additional styles for metadata panel */

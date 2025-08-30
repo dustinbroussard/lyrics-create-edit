@@ -299,7 +299,7 @@ const saveCurrentSongWithMetadata = (song) => {
     const songIndex = songs.findIndex(s => s.id === song.id);
     if (songIndex !== -1) {
         songs[songIndex] = song;
-        localStorage.setItem('songs', JSON.stringify(songs));
+        try { localStorage.setItem('songs', JSON.stringify(songs)); window.StorageSafe?.snapshotLater?.('editor:metaSave'); } catch {}
     }
     
     return song;
@@ -307,8 +307,8 @@ const saveCurrentSongWithMetadata = (song) => {
 
 
 function safeLocalStorageSet(key, value) {
-    try { localStorage.setItem(key, value); return true; }
-    catch (e) { console.warn('localStorage write failed', e); return false; }
+    try { localStorage.setItem(key, value); try { window.StorageSafe?.snapshotLater?.('editor:helperSet'); } catch {} return true; }
+    catch (e) { console.warn('localStorage write failed', e); try { window.StorageSafe?.snapshotWithData?.(value, 'editor:helperFail'); } catch {} return false; }
 }
 function safeLocalStorageGet(key, fallback='[]') {
     try { return localStorage.getItem(key) ?? fallback; }
@@ -340,6 +340,7 @@ async function importSongs(file) {
         }
         const merged = Array.from(byId.values());
         if (!safeLocalStorageSet('songs', JSON.stringify(merged))) throw new Error('Storage failed');
+        try { window.StorageSafe?.snapshotLater?.('editor:import'); } catch {}
         return merged;
     } catch (e) {
         console.error('importSongs failed', e);

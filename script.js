@@ -156,7 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
     defaultSections: "[Intro]\n\n[Verse 1]\n\n[Pre-Chorus]\n\n[Chorus]\n\n[Verse 2]\n\n[Bridge]\n\n[Outro]",
     sortOrder: localStorage.getItem('songSortOrder') || 'titleAsc',
 
-    init() {
+    async init() {
+      try { await window.StorageSafe?.init?.(); } catch {}
       // Load mammoth for DOCX processing
       if (typeof mammoth === 'undefined') {
         console.warn('Mammoth.js not loaded - DOCX support will not work');
@@ -223,7 +224,14 @@ document.addEventListener('DOMContentLoaded', () => {
     },
 
     saveSongs() {
-      localStorage.setItem('songs', JSON.stringify(this.songs));
+      const data = JSON.stringify(this.songs);
+      try {
+        localStorage.setItem('songs', data);
+      } catch (e) {
+        console.warn('localStorage write failed', e);
+        try { window.StorageSafe?.snapshotWithData?.(data, 'main:lsFail'); } catch {}
+      }
+      try { window.StorageSafe?.snapshotLater?.('saveSongs'); } catch {}
     },
 
     generateId() {
