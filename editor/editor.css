@@ -311,7 +311,9 @@
     caret-color: var(--accent-primary);
     outline: none;
     min-height: max-content;
+    margin-bottom: 3rem;
 }
+
 #lyrics-display.editable:empty::before {
     content: "Start typing your lyrics...";
     color: var(--text-muted)
