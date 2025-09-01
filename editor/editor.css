@@ -100,16 +100,66 @@
 
 /* Responsive tweaks */
 @media (max-width: 600px) {
+    /* Single row: left column stacks title/status, icons stay on right */
     #app-header {
-        flex-wrap: wrap;
-        gap: 0.5rem;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 0.4rem;
+        padding: 0.5rem 0.6rem 1.05rem 0.8rem; /* extra bottom room for centered save status */
+    }
+    #app-header .header-left {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: grid;
+        grid-template-columns: 1fr auto; /* edited | (no save-status here) */
+        grid-auto-rows: min-content;
+        row-gap: 0.05rem; /* tighten spacing between title and meta */
+        column-gap: 0.5rem;
+        align-items: baseline;
     }
     #app-header .header-right {
-        flex-wrap: wrap;
-        gap: 0.5rem;
+        flex: 0 0 auto;
+        margin-left: auto;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.45rem;
+        padding-top: 0;
+        border-top: none;
+        flex-wrap: nowrap;
+        align-self: flex-start; /* align with top of title stack */
     }
+    #app-title {
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
+        line-height: 1.2;
+        margin: 0;
+        grid-column: 1 / -1; /* title spans both columns */
+    }
+    /* Under-title metadata */
+    #song-edited {
+        display: block;
+        grid-column: 1;
+        font-size: 0.76rem;
+        color: var(--text-muted);
+        line-height: 1.05;
+        min-width: 0;
+    }
+    /* Save status centered at bottom of header */
+    #save-status {
+        position: absolute;
+        left: 50%;
+        bottom: 4px;
+        transform: translateX(-50%);
+        font-size: 0.76rem;
+        line-height: 1;
+        text-align: center;
+        margin: 0;
+    }
+
     .btn.icon-btn {
-        width: 2em;
+        width: 2rem;
         height: 2rem;
     }
     #font-controls button {
@@ -447,7 +497,7 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
   display: flex;
-  z-index: 9999;
+  z-index: 1000001; /* Above any floating FAB/context menus */
   justify-content: center;
   align-items: center;
   opacity: 0;
@@ -458,6 +508,9 @@
   opacity: 1;
   pointer-events: auto;
 }
+
+/* Hide floating font FAB when any modal is visible (FAB is appended after overlays) */
+.modal-overlay.visible ~ .font-fab { display: none !important; }
 .modal {
   background: var(--bg-secondary);
   padding: 1.5rem;
@@ -674,7 +727,7 @@
     gap: 1rem;
   }
   #lyrics-display {
-    margin-top: 2rem;
+    margin-top: 0rem;
   }
 
   .lyrics-container {

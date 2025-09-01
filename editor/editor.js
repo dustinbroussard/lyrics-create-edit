@@ -402,7 +402,7 @@ function enforceAlternating(lines) {
         editorSongs: [],
         currentEditorSongIndex: -1,
         fontSize: 16,
-        minFontSize: 12,
+        minFontSize: 8,
         maxFontSize: 72,
         fontSizeStep: 1,
         perSongFontSizes: JSON.parse(localStorage.getItem('perSongFontSizes') || '{}'),
@@ -1899,8 +1899,37 @@ saveCurrentSong(isExplicit = false) {
         },
 
         handleLyricsClick(e) {
-            if (e.target.classList.contains('lyrics-line') || e.target.classList.contains('chord-line')) {
-                // Keep the cursor where it is
+            // If the user tapped inside existing editable areas, keep default behavior
+            if (
+                e.target.closest('.lyric-text, .chord-line, .section-label-text')
+            ) {
+                return;
+            }
+
+            // Otherwise, ensure there is a trailing blank line and focus it for quick entry
+            this.ensureTrailingBlankDomLine();
+            // Prefer focusing the last lyric line within the last section if present
+            let container = this.lyricsDisplay;
+            const sections = this.lyricsDisplay.querySelectorAll('.section');
+            if (sections.length > 0) {
+                const lastSection = sections[sections.length - 1];
+                const content = lastSection.querySelector('.section-content');
+                if (content) container = content;
+            }
+            const lastText = container.querySelector('.lyrics-line-group:last-child .lyric-text');
+            if (lastText) {
+                lastText.focus();
+                try {
+                    const sel = window.getSelection();
+                    const range = document.createRange();
+                    // Place caret at end of the contenteditable span
+                    const endNode = lastText.childNodes[lastText.childNodes.length - 1] || lastText;
+                    const endOffset = endNode.nodeType === Node.TEXT_NODE ? endNode.textContent.length : endNode.childNodes.length;
+                    range.setStart(endNode, Math.max(0, endOffset));
+                    range.collapse(true);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                } catch {}
             }
         },
 
