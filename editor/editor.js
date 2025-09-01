@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        static showToast(message, type = 'info') {
+        static showToast(message, type = 'info', duration = 3000) {
             let container = document.querySelector('.toast-container');
             if (!container) {
                 container = document.createElement('div');
@@ -60,17 +60,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
-            toast.textContent = message;
+            toast.setAttribute('role', 'status');
+            toast.setAttribute('tabindex', '0');
+
+            const content = document.createElement('div');
+            content.className = 'toast-content';
+            content.textContent = message;
+            toast.appendChild(content);
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'toast-close';
+            closeBtn.setAttribute('aria-label', 'Close notification');
+            closeBtn.innerHTML = '&times;';
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            });
+            toast.appendChild(closeBtn);
+
+            // Allow click to dismiss
+            toast.addEventListener('click', () => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            });
+            toast.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }
+            });
             container.appendChild(toast);
 
             // Trigger animation
             setTimeout(() => toast.classList.add('show'), 10);
 
-            // Remove after 3 seconds with fade out
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            // Auto-remove only if duration > 0
+            if (typeof duration === 'number' && duration > 0) {
+                const hideAfter = duration;
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, hideAfter);
+            } else {
+                toast.classList.add('toast-sticky');
+            }
         }
 
         static formatLyricsWithChords(lyrics, chords) {
@@ -333,6 +368,7 @@ function enforceAlternating(lines) {
         editorMode: document.getElementById('editor-mode'),
         lyricsEditorContainer: document.getElementById('lyrics-editor-container'),
         lyricsDisplay: document.getElementById('lyrics-display'),
+        fontControlsEl: document.getElementById('font-controls'),
         decreaseFontBtn: document.getElementById('font-decrease'),
         increaseFontBtn: document.getElementById('font-increase'),
         fontSizeDisplay: document.getElementById('font-size-display'),
@@ -412,6 +448,7 @@ function enforceAlternating(lines) {
                 this.rhymeModeToggle.checked = this.isRhymeMode;
             }
             this.displayCurrentEditorSong();
+            this.initFontControlsMobile();
             window.addEventListener('beforeunload', (e) => {
                 // If song is blank, delete it silently on unload
                 if (this.currentSong && this.isSongBlank(this.currentSong)) {
@@ -425,6 +462,71 @@ function enforceAlternating(lines) {
             this.setupResizeObserver();
             this.isChordsVisible = window.CONFIG.chordsModeEnabled;
             this.updateChordsVisibility();
+            // Re-init floating controls on orientation/resize
+            window.addEventListener('resize', debounce(() => this.initFontControlsMobile(), 200));
+        },
+
+        initFontControlsMobile() {
+            const isMobile = window.innerWidth <= 800;
+            if (!this.fontControlsEl) return;
+            if (!isMobile) {
+                this.fontControlsEl.classList.add('visible');
+                if (this.fontFab && this.fontFab.parentNode) this.fontFab.parentNode.removeChild(this.fontFab);
+                this.fontFab = null;
+                this.clearFontControlsHideTimer?.();
+                return;
+            }
+            // On mobile: keep hidden until user taps FAB
+            this.fontControlsEl.classList.remove('visible');
+            if (!this.fontFab) {
+                const btn = document.createElement('button');
+                btn.className = 'font-fab';
+                btn.title = 'Font controls';
+                btn.innerHTML = '<i class="fas fa-text-height"></i>';
+                document.body.appendChild(btn);
+                btn.addEventListener('click', () => this.showFontControls());
+                this.fontFab = btn;
+            }
+            // Hide when clicking outside controls
+            if (!this._fontOutsideHandler) {
+                this._fontOutsideHandler = (e) => {
+                    if (!this.fontControlsEl.classList.contains('visible')) return;
+                    if (this.fontControlsEl.contains(e.target)) return;
+                    if (this.fontFab && this.fontFab.contains(e.target)) return;
+                    this.hideFontControls();
+                };
+                document.addEventListener('click', this._fontOutsideHandler);
+            }
+            // Keep visible on interaction
+            const reset = () => this.resetFontControlsHideTimer();
+            this.fontControlsEl.addEventListener('mousemove', reset);
+            this.fontControlsEl.addEventListener('touchstart', reset, { passive: true });
+        },
+
+        showFontControls() {
+            if (!this.fontControlsEl) return;
+            this.fontControlsEl.classList.add('visible');
+            if (this.fontFab) this.fontFab.classList.add('hidden');
+            this.resetFontControlsHideTimer();
+        },
+
+        hideFontControls() {
+            if (!this.fontControlsEl) return;
+            this.fontControlsEl.classList.remove('visible');
+            if (this.fontFab) this.fontFab.classList.remove('hidden');
+            this.clearFontControlsHideTimer();
+        },
+
+        resetFontControlsHideTimer() {
+            this.clearFontControlsHideTimer();
+            this._fontControlsTimer = setTimeout(() => this.hideFontControls(), 4000);
+        },
+
+        clearFontControlsHideTimer() {
+            if (this._fontControlsTimer) {
+                clearTimeout(this._fontControlsTimer);
+                this._fontControlsTimer = null;
+            }
         },
 
         // Consider a song "blank" if it's still the default template with no chords/notes/tags
@@ -652,8 +754,8 @@ function enforceAlternating(lines) {
 
         setupEventListeners() {
             // Existing event listeners
-            this.decreaseFontBtn?.addEventListener('click', () => this.adjustFontSize(-this.fontSizeStep));
-            this.increaseFontBtn?.addEventListener('click', () => this.adjustFontSize(this.fontSizeStep));
+            this.decreaseFontBtn?.addEventListener('click', () => { this.adjustFontSize(-this.fontSizeStep); this.resetFontControlsHideTimer?.(); });
+            this.increaseFontBtn?.addEventListener('click', () => { this.adjustFontSize(this.fontSizeStep); this.resetFontControlsHideTimer?.(); });
             this.toggleThemeBtn?.addEventListener('click', () => this.toggleTheme());
             this.exitEditorBtn?.addEventListener('click', () => this.exitEditorMode());
             this.lyricsDisplay?.addEventListener('click', (e) => this.handleLyricsClick(e));
@@ -1021,6 +1123,8 @@ function enforceAlternating(lines) {
             } else {
                 this.pendingAIRange = null;
             }
+            // Track action type so acceptAI can apply correct behavior
+            this.pendingAIType = action;
             this.callOpenRouter(prompt);
         },
 
@@ -1035,9 +1139,9 @@ function enforceAlternating(lines) {
                 this.showAILoading(false);
                 if (!response) return;
 
-                // Rhymes are informational; show toast as-is
+                // Rhymes are informational; show as persistent toast until dismissed
                 if (rhyme) {
-                    ClipboardManager.showToast(cleanAIOutput(response), 'info');
+                    ClipboardManager.showToast(cleanAIOutput(response), 'info', 0);
                     return;
                 }
 
@@ -1079,7 +1183,7 @@ function enforceAlternating(lines) {
             const ctx = chooseMicroContract(prompt);
 
             // Handle selection-based actions
-            if (/^Suggest alternative wording/i.test(prompt) || /^Rewrite this line/i.test(prompt)) {
+            if (this.pendingAIType === 'reword' || this.pendingAIType === 'rewrite' || /^Suggest alternative wording/i.test(prompt) || /^Rewrite this line/i.test(prompt)) {
                 const sel = window.getSelection();
                 const range = (this.pendingAIRange && (sel?.rangeCount ? sel.getRangeAt(0) : null)) ? sel.getRangeAt(0) : this.pendingAIRange;
                 if (range) {
@@ -1096,11 +1200,15 @@ function enforceAlternating(lines) {
                         range.deleteContents();
                         range.insertNode(document.createTextNode(normalized));
                         sel?.removeAllRanges();
+                        // Update counts/colors since we didn't trigger input event
+                        this.updateSyllableCount();
+                        this.updateRhymes();
                         this.saveCurrentSong(true);
                     } catch {}
                 }
                 this.pendingAIRange = null;
                 this.pendingAI = null;
+                this.pendingAIType = null;
                 this.hideAIReview();
                 return;
             }
@@ -1115,6 +1223,7 @@ function enforceAlternating(lines) {
                 ClipboardManager.showToast('Lyrics continued', 'success');
                 this.pendingAIRange = null;
                 this.pendingAI = null;
+                this.pendingAIType = null;
                 this.hideAIReview();
                 return;
             }
@@ -1137,6 +1246,7 @@ function enforceAlternating(lines) {
                 this.saveCurrentSong(true);
                 ClipboardManager.showToast('Chords suggested', 'success');
                 this.pendingAI = null;
+                this.pendingAIType = null;
                 this.hideAIReview();
                 return;
             }
@@ -1155,12 +1265,14 @@ function enforceAlternating(lines) {
             ClipboardManager.showToast('AI update applied', 'success');
             this.pendingAI = null;
             this.pendingAIRange = null;
+            this.pendingAIType = null;
             this.hideAIReview();
         },
 
         rejectAI() {
             this.pendingAI = null;
             this.pendingAIRange = null;
+            this.pendingAIType = null;
             this.hideAIReview();
         },
 
@@ -1494,6 +1606,28 @@ saveCurrentSong(isExplicit = false) {
             this.updateChordsVisibility();
             this.updateSyllableCount();
             this.autoNumberVerses();
+            this.ensureTrailingBlankDomLine();
+        },
+
+        ensureTrailingBlankDomLine() {
+            // Determine the container to add the trailing blank: prefer last section's content
+            let container = this.lyricsDisplay;
+            const sections = this.lyricsDisplay.querySelectorAll('.section');
+            if (sections.length > 0) {
+                const lastSection = sections[sections.length - 1];
+                const content = lastSection.querySelector('.section-content');
+                if (content) container = content;
+            }
+
+            // Find last line group inside chosen container
+            const groups = container.querySelectorAll('.lyrics-line-group');
+            const lastGroup = groups[groups.length - 1] || null;
+            const lastLyric = lastGroup?.querySelector('.lyric-text')?.textContent?.trim() || '';
+            const lastChord = lastGroup?.querySelector('.chord-line')?.textContent?.trim() || '';
+            const needBlank = !lastGroup || (lastLyric !== '' || lastChord !== '');
+            if (needBlank) {
+                this.addLyricLine('', '', null, 0, container, null);
+            }
         },
 
         insertSectionAtCursor(label) {
@@ -1760,6 +1894,7 @@ saveCurrentSong(isExplicit = false) {
             this.trimDomEmptyLines();
             this.convertBracketSections();
             this.autoNumberVerses();
+            this.ensureTrailingBlankDomLine();
             this.debouncedSaveCurrentSong && this.debouncedSaveCurrentSong();
         },
 

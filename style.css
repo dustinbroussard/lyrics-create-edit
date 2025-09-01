@@ -8,96 +8,109 @@
     --border-radius-base: 1rem;
     --transition-speed: 0.3s ease-in-out;
 }
+/* ========================================
 
-/* ========================================
-    Theme Definitions
-    ======================================== */
-/* ========================================
-   RED DARK THEME
    ======================================== */
+/* ========================================
+   NEW THEME: Amber on Carbon (HSL-based)
+   Keeps your original variable names
+   ======================================== */
+
 :root,
-[data-theme="dark"],
-[data-theme="amoled-dark"] {
-    /* Background Colors */
-    --bg-primary: #26100F;
-    --bg-secondary: #360909;
-    --bg-tertiary: #5e0010;
-    --bg-hover: #7a0212;
-    --bg-active: #9e001c;
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-primary:  hsl(0 0% 0%);
+  --bg-secondary:hsl(0 0% 4%);
+  --bg-tertiary: hsl(0 0% 7%);
+  --bg-hover:    hsl(0 0% 10%);
+  --bg-active:   hsl(0 0% 13%);
 
-    /* Text Colors */
-    --text-primary: #fdfbfa;
-    --text-secondary: #b89a9f;
-    --text-muted: #885e66;
+  /* Text */
+  --text-primary:   hsl(0 0% 100%);
+  --text-secondary: hsl(0 0% 80%);
+  --text-muted:     hsl(0 0% 53%);
 
-    /* Accent Colors */
-    --accent-primary: #c1001f;
-    --accent-secondary: #e52e3b;
-    --accent-hover: #ff475a;
-    --accent-active: #7a0212;
-    --accent-glow: rgba(255, 71, 90, 0.3);
+  /* Accents (Amber) */
+  --accent-primary:   hsl(41 46% 69%); /* ≈ #d4bd8c */
+  --accent-secondary: hsl(41 46% 59%);
+  --accent-hover:     hsl(41 46% 79%);
+  --accent-active:    hsl(41 46% 49%);
+  --accent-glow:      hsla(41 46% 69% / 0.30);
 
-    /* Borders */
-    --border: #9e001c;
-    --border-light: #b89a9f;
+  /* Borders */
+  --border:       hsl(0 0% 20%);
+  --border-light: hsl(0 0% 16%);
 
-    /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(255, 71, 90, 0.05), 0 1px 2px rgba(255, 71, 90, 0.1);
-    --shadow-md: 0 4px 6px rgba(255, 71, 90, 0.1), 0 1px 3px rgba(255, 71, 90, 0.05);
-    --shadow-lg: 0 10px 25px rgba(255, 71, 90, 0.1), 0 5px 10px rgba(255, 71, 90, 0.05);
+  /* Shadows (use light-on-dark glow) */
+  --shadow-sm: 0 1px 3px hsl(0 0% 100% / 0.06), 0 1px 2px hsl(0 0% 100% / 0.12);
+  --shadow-md: 0 4px 6px hsl(0 0% 100% / 0.10), 0 1px 3px hsl(0 0% 100% / 0.06);
+  --shadow-lg: 0 10px 25px hsl(0 0% 100% / 0.12), 0 5px 10px hsl(0 0% 100% / 0.06);
 
-    /* Status Colors */
-    --success: #00e600;
-    --warning: #e6e600;
-    --danger: #e60000;
-    --info: #00cccc;
+  /* Status */
+  --success: hsl(120 100% 50%);
+  --warning: hsl(60 100% 50%);
+  --danger:  hsl(0 100% 50%);
+  --info:    hsl(180 100% 50%);
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, #26100F 0%,  #360909 100%);
-    --gradient-accent: linear-gradient(135deg, #c1001f 0%, #e52e3b 100%);
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, hsl(0 0% 0%) 0%, hsl(0 0% 10%) 100%);
+  --gradient-accent:  linear-gradient(135deg, hsl(41 46% 69%) 0%, hsl(41 46% 79%) 100%);
+
+  /* Optional helper tokens (if your components expect them) */
+  --border-custom: hsl(0 0% 20%);
 }
 
-/* ========================================
-   RED LIGHT THEME
-   ======================================== */
 [data-theme="light"] {
-    /* Background Colors */
-    --bg-primary: #fdfbfa;
-    --bg-secondary: #f0dada;
-    --bg-tertiary: #f7d0d0;
-    --bg-hover: #ffc0c0;
-    --bg-active: #ffaaaa;
+  /* Backgrounds */
+  --bg-primary:   hsl(0 0% 100%);
+  --bg-secondary: hsl(0 0% 96%);
+  --bg-tertiary:  hsl(0 0% 88%);
+  --bg-hover:     hsl(0 0% 82%);
+  --bg-active:    hsl(0 0% 75%);
 
-    /* Text Colors */
-    --text-primary: #0d0004;
-    --text-secondary: #5e0010;
-    --text-muted: #9e001c;
+  /* Text */
+  --text-primary:   hsl(0 0% 4%);
+  --text-secondary: hsl(0 0% 20%);
+  --text-muted:     hsl(0 0% 40%);
 
-    /* Accent Colors */
-    --accent-primary: #c1001f;
-    --accent-secondary: #9e001c;
-    --accent-hover: #7a0212;
-    --accent-active: #e52e3b;
-    --accent-glow: rgba(193, 0, 31, 0.3);
+  /* Accents (darker amber for contrast) */
+  --accent-primary:   hsl(41 46% 38%);
+  --accent-secondary: hsl(41 46% 46%);
+  --accent-hover:     hsl(41 46% 56%);
+  --accent-active:    hsl(41 46% 46%);
+  --accent-glow:      hsla(41 46% 46% / 0.25);
 
-    /* Borders */
-    --border: #b89a9f;
-    --border-light: #dcafb0;
+  /* Borders */
+  --border:       hsl(0 0% 80%);
+  --border-light: hsl(0 0% 82%);
 
-    /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(193, 0, 31, 0.12), 0 1px 2px rgba(193, 0, 31, 0.24);
-    --shadow-md: 0 4px 6px rgba(193, 0, 31, 0.1), 0 1px 3px rgba(193, 0, 31, 0.08);
-    --shadow-lg: 0 10px 25px rgba(193, 0, 31, 0.1), 0 5px 10px rgba(193, 0, 31, 0.05);
+  /* Shadows (neutral dark on light) */
+  --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.12), 0 1px 2px hsl(0 0% 0% / 0.18);
+  --shadow-md: 0 4px 6px hsl(0 0% 0% / 0.10), 0 1px 3px hsl(0 0% 0% / 0.08);
+  --shadow-lg: 0 10px 25px hsl(0 0% 0% / 0.10), 0 5px 10px hsl(0 0% 0% / 0.06);
 
-    /* Status Colors */
-    --success: #008000;
-    --warning: #cc9900;
-    --danger: #cc0000;
-    --info: #006666;
+  /* Status */
+  --success: hsl(120 100% 50%);
+  --warning: hsl(60 100% 50%);
+  --danger:  hsl(0 100% 50%);
+  --info:    hsl(180 100% 50%);
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, #fdfbfa 0%, #f0dada 100%);
-    --gradient-accent: linear-gradient(135deg, #c1001f 0%, #9e001c 100%);
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(0 0% 82%) 100%);
+  --gradient-accent:  linear-gradient(135deg, hsl(41 46% 46%) 0%, hsl(41 46% 56%) 100%);
+
+  /* Optional helper tokens (if your components expect them) */
+  --border-custom: hsl(0 0% 80%);
+}
+
+/* Optional: amber ramp utilities for hover/active */
+:root,
+[data-theme="mardi-gold-dark"],
+[data-theme="mardi-gold-light"] {
+  --amber-800: 41 46% 49%;
+  --amber-700: 41 46% 59%;
+  --amber-600: 41 46% 46%;
+  --amber-500: 41 46% 38%;
 }
 
 
@@ -578,7 +591,7 @@ mark {
     width: 2rem;
     height: 2rem;
     background: var(--accent-secondary);
-    color: var(--bg-secondary);
+    color: var(--bg-primary);
     font-size: 0.8rem;
     padding: 0;
     border-radius: 50%;
@@ -591,7 +604,7 @@ mark {
 
 .btn.danger {
     background-color: var(--danger); /* Danger button uses danger color */
-    color: var(--text-primary); /* Ensure contrast on danger button */
+    color: white;
 }
 .btn.danger:hover {
     filter: brightness(0.9);
@@ -1236,7 +1249,7 @@ html, body {
 
 .song-actions .icon-btn {
     background: var(--bg-primary);
-    color: var(--accent-secondary);
+    color: var(--accent-primary);
     border: 1px solid var(--border);
     border-radius: 50%;
     width: 2rem;
@@ -1373,6 +1386,26 @@ html, body {
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
 }
 
+/* Toast content + close button */
+.toast .toast-content {
+    padding-right: 1.5rem;
+}
+.toast .toast-close {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 4px;
+    opacity: 0.9;
+}
+.toast .toast-close:hover { opacity: 1; }
+.toast.toast-sticky { outline: 1px dashed rgba(255,255,255,0.2); }
+
 /* ========================================
     Mobile Optimizations
     ======================================== */
@@ -1433,6 +1466,8 @@ html, body {
         position: absolute;
         top: 0.1rem;
         right: -3rem;
+        height: 1rem;
+        width: 1rem;
     }
 }
 
@@ -1472,6 +1507,13 @@ html, body {
     .metadata-row select,
     .metadata-row textarea {
         font-size: 16px; /* Prevents zoom on iOS */
+    }
+    .theme-icon-btn {
+        position: absolute;
+        top: 0.1rem;
+        right: -3rem;
+        height: 1rem !important;
+        width: 1rem !important;
     }
 }
 
