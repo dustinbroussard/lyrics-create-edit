@@ -6,15 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>LyricSmith</title>
     <script>
-      // Apply saved theme ASAP to avoid FOUC
+      // Apply saved theme ASAP to avoid FOUC and set status bar color
       try {
         const t = localStorage.getItem('theme') || 'dark';
         document.documentElement.dataset.theme = t;
+        const m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute('content', t === 'dark' ? '#000000' : '#ffffff');
       } catch {}
     </script>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.webmanifest">
-    <meta name="theme-color" content="#00bcd4">
+    <meta name="theme-color" content="#000000" id="theme-color">
     <link rel="icon" href="assets/icons/icon-192x192.png">
     <!-- Use a single up-to-date Font Awesome version -->
     <link href="lib/fontawesome/css/all.min.css" rel="stylesheet">

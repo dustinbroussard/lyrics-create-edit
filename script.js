@@ -15,12 +15,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedTheme = localStorage.getItem('theme') || 'dark';
   document.documentElement.dataset.theme = savedTheme;
 
+  function setThemeColorMeta(theme) {
+    try {
+      const meta = document.querySelector('meta[name="theme-color"]') || (function(){
+        const m = document.createElement('meta');
+        m.name = 'theme-color';
+        document.head.appendChild(m);
+        return m;
+      })();
+      meta.setAttribute('content', theme === 'dark' ? '#000000' : '#ffffff');
+    } catch {}
+  }
+  setThemeColorMeta(savedTheme);
+
   function attachThemeToggle() {
     const themeToggleBtn = document.getElementById('theme-toggle-btn');
     themeToggleBtn?.addEventListener('click', () => {
       const newTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
       document.documentElement.dataset.theme = newTheme;
       localStorage.setItem('theme', newTheme);
+      setThemeColorMeta(newTheme);
     });
   }
   attachThemeToggle();

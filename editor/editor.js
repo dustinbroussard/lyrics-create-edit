@@ -17,6 +17,18 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    function setThemeColorMeta(theme) {
+        try {
+            const meta = document.querySelector('meta[name="theme-color"]') || (function(){
+                const m = document.createElement('meta');
+                m.name = 'theme-color';
+                document.head.appendChild(m);
+                return m;
+            })();
+            meta.setAttribute('content', theme === 'dark' ? '#000000' : '#ffffff');
+        } catch {}
+    }
+
 // Clipboard Manager Class
     class ClipboardManager {
         static async copyToClipboard(text, showToast = true) {
@@ -582,6 +594,7 @@ function enforceAlternating(lines) {
             this.songs = JSON.parse(localStorage.getItem('songs')) || [];
             const theme = localStorage.getItem('theme') || 'dark';
             document.documentElement.dataset.theme = theme;
+            setThemeColorMeta(theme);
             // Ensure IDs are unique and remember any remaps
             this.ensureUniqueIds();
         },
@@ -1970,6 +1983,7 @@ saveCurrentSong(isExplicit = false) {
             const newTheme = currentTheme.includes('dark') ? 'light' : 'dark';
             document.documentElement.dataset.theme = newTheme;
             localStorage.setItem('theme', newTheme);
+            setThemeColorMeta(newTheme);
         },
 
         exitEditorMode() {
