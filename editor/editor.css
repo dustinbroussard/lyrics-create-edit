@@ -889,7 +889,7 @@
     border-radius: calc(var(--border-radius-base) * 1.25);
     box-shadow: var(--shadow-md);
     backdrop-filter: blur(4px);
-    z-index: 99999;
+    z-index: 1000002; /* Above modal overlay */
     padding: 1rem;
     width: 300px;
     max-height: 80vh;
